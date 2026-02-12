@@ -11,11 +11,14 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 def get_gemini_response(input,image, prompt):#function to generate response
-    model=genai.GenerativeModel('gemini-1.5-flash-latest')#generative ai model, generate content based on the input
+    model=genai.GenerativeModel('gemini-1.5-pro')#generative ai model, generate content based on the input
     response=model.generate_content([input,image[0],prompt])#genrate content using model
     return response.text #return the response in text format
 
-
+for model in genai.list_models():
+       if 'generateContent' in model.supported_generation_methods:
+           print(model.name)  
+           
 def input_image_setup(uploaded_file):#function to process image
     if uploaded_file is not None:
         bytes_data = uploaded_file.getvalue()#Converts the uploaded file into a byte format (binary data). This is necessary for passing the image to the generative model

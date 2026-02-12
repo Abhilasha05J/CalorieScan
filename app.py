@@ -71,7 +71,6 @@ from google.genai import types
 import os
 from dotenv import load_dotenv
 from PIL import Image
-import io
 
 # Load environment variables
 load_dotenv()
@@ -81,6 +80,7 @@ client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 st.set_page_config(page_title="CalorieScan", page_icon="🍎")
 st.title("🍎 CalorieScan")
+st.write("Upload a food image to analyze its nutritional content")
 
 uploaded_file = st.file_uploader("Upload food image", type=["jpg", "jpeg", "png"])
 
@@ -89,13 +89,11 @@ if uploaded_file:
     image = Image.open(uploaded_file)
     st.image(image, use_container_width=True)
     
-    if st.button("🔍 Analyze Calories"):
+    if st.button("🔍 Analyze Calories", type="primary"):
         with st.spinner("Analyzing..."):
             try:
-                # Reset file pointer
+                # Reset file pointer and read bytes
                 uploaded_file.seek(0)
-                
-                # Read image bytes
                 image_bytes = uploaded_file.read()
                 
                 # Prepare prompt
@@ -112,26 +110,36 @@ if uploaded_file:
                 Brief nutritional breakdown (protein, carbs, fats).
                 """
                 
-                # Create proper content structure
+                # Generate content - simpler approach
                 response = client.models.generate_content(
                     model='gemini-2.0-flash-exp',
                     contents=[
-                        types.Content(
-                            parts=[
-                                types.Part.from_text(prompt),
-                                types.Part.from_bytes(
-                                    data=image_bytes,
-                                    mime_type=uploaded_file.type
-                                )
-                            ]
+                        prompt,
+                        types.Part.from_bytes(
+                            data=image_bytes,
+                            mime_type=uploaded_file.type
                         )
                     ]
                 )
                 
-                st.subheader("📊 Analysis")
+                st.subheader("📊 Nutritional Analysis")
                 st.write(response.text)
+                
+                # Download button
+                st.download_button(
+                    label="📥 Download Analysis",
+                    data=response.text,
+                    file_name="calorie_analysis.txt",
+                    mime="text/plain"
+                )
                 
             except Exception as e:
                 st.error(f"Error: {str(e)}")
-                st.info("Make sure your Google API key is valid and has access to Gemini models.")
+                st.info("💡 Make sure your Google API key is valid and has access to Gemini models.")
 
+else:
+    st.info("👆 Upload an image to get started")
+
+# Footer
+st.markdown("---")
+st.caption("Powered by Google Gemini AI")

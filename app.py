@@ -65,18 +65,18 @@
 #     st.subheader("Response")
 #     st.write(response)
 
-
 import streamlit as st
 from google import genai
+from google.genai import types
 import os
 from dotenv import load_dotenv
 from PIL import Image
-import base64
+import io
 
 # Load environment variables
 load_dotenv()
 
-# Configure API
+# Initialize client
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 st.set_page_config(page_title="CalorieScan", page_icon="🍎")
@@ -85,33 +85,53 @@ st.title("🍎 CalorieScan")
 uploaded_file = st.file_uploader("Upload food image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
+    # Display image
     image = Image.open(uploaded_file)
     st.image(image, use_container_width=True)
     
-    if st.button("Analyze Calories"):
+    if st.button("🔍 Analyze Calories"):
         with st.spinner("Analyzing..."):
             try:
+                # Reset file pointer
+                uploaded_file.seek(0)
+                
                 # Read image bytes
-                image_bytes = uploaded_file.getvalue()
+                image_bytes = uploaded_file.read()
                 
-                # Create the prompt
-                prompt = """Analyze this food image and list:
-                1. Each food item with calories
-                2. Total calories
-                3. Brief nutritional breakdown"""
+                # Prepare prompt
+                prompt = """
+                You are an expert nutritionist. Analyze the food items in this image
+                and provide:
                 
-                # Generate response
+                1. Item 1 - calories
+                2. Item 2 - calories
+                3. Item 3 - calories
+                ----
+                Total Calories: X kcal
+                
+                Brief nutritional breakdown (protein, carbs, fats).
+                """
+                
+                # Create proper content structure
                 response = client.models.generate_content(
                     model='gemini-2.0-flash-exp',
                     contents=[
-                        prompt,
-                        {"mime_type": uploaded_file.type, "data": image_bytes}
+                        types.Content(
+                            parts=[
+                                types.Part.from_text(prompt),
+                                types.Part.from_bytes(
+                                    data=image_bytes,
+                                    mime_type=uploaded_file.type
+                                )
+                            ]
+                        )
                     ]
                 )
                 
-                st.subheader("Analysis")
+                st.subheader("📊 Analysis")
                 st.write(response.text)
                 
             except Exception as e:
                 st.error(f"Error: {str(e)}")
+                st.info("Make sure your Google API key is valid and has access to Gemini models.")
 
